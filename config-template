@@ -1,0 +1,5 @@
+<destination> weight timeout
+
+http://example.s1.com:80 5 5
+http://example.s2.com:8000 2 7
+http://example.s2.com:8080 2 7

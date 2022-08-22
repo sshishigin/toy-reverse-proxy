@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"toy-reverse-proxy/src/simple"
@@ -12,5 +13,6 @@ func main() {
 		serverBucket.Do(rw, req)
 		return
 	})
+	fmt.Println("[Listening and serving on localhost:8080]")
 	log.Fatal(http.ListenAndServe(":8080", reverseProxy))
 }

@@ -44,15 +44,18 @@ func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 		response, err := http.DefaultClient.Do(req)
 		if err != nil {
 			_, _ = fmt.Fprintln(rw, err)
+			fmt.Printf("%s request failed\n", time.Now().Format("2006-01-02 15:04:05"))
 			return
 		}
-		if response.StatusCode == 200 {
+		if response.StatusCode == 200 || (response.StatusCode != 429 && response.StatusCode < 500) {
 			rw.WriteHeader(response.StatusCode)
 			io.Copy(rw, response.Body)
+			fmt.Printf("[%s] successful response from %s with status %d\n", time.Now().Format("2006-01-02 15:04:05"), req.URL.Host, response.StatusCode)
 			return
 		}
 		server.excludeWithTimeout()
 	}
+	fmt.Printf("%s failed by all %d servers\n", time.Now().Format("2006-01-02 15:04:05"), len(sb.serversAvailable))
 	rw.WriteHeader(500)
 }
 
@@ -77,6 +80,7 @@ func NewSimpleServerBucket() (sb ServerBucket) {
 	for i := range servers {
 		serversAvailable = append(serversAvailable, &servers[i])
 	}
+	fmt.Printf("%d servers found in config \n", len(serversAvailable))
 	sb = ServerBucket{servers, 0, serversAvailable}
 	return
 }

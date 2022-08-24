@@ -26,17 +26,19 @@ func (sb *ServerBucket) getServer() *simpleServer {
 	} else {
 		sb.pointer = 0
 	}
-	for {
-		if server.available {
-			return server
-		}
+	if server.available {
+		return server
 	}
 
+	return nil
 }
 
 func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	for _ = range sb.serversAvailable {
 		server := sb.getServer()
+		if server == nil {
+			continue
+		}
 		req.Host = server.Location.Host
 		req.URL.Host = server.Location.Host
 		req.URL.Scheme = server.Location.Scheme

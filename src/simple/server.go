@@ -12,7 +12,10 @@ type simpleServer struct {
 }
 
 func (s *simpleServer) excludeWithTimeout() {
-	s.available = false
-	time.Sleep(s.timeout)
-	s.available = true
+	go func() {
+		s.available = false
+		time.Sleep(s.timeout)
+		s.available = true
+	}()
+
 }

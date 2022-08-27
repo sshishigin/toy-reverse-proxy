@@ -1,6 +1,7 @@
 package simple
 
 import (
+	"log"
 	"net/url"
 	"time"
 )

@@ -17,6 +17,7 @@ type ServerBucket struct {
 	ServerList       []simpleServer
 	pointer          int
 	serversAvailable []*simpleServer
+	maxRetries       int
 }
 
 func (sb *ServerBucket) getServer() *simpleServer {
@@ -34,7 +35,7 @@ func (sb *ServerBucket) getServer() *simpleServer {
 }
 
 func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
-	for _ = range sb.serversAvailable {
+	for i := 0; i < sb.maxRetries; i++ {
 		server := sb.getServer()
 		if server == nil {
 			continue
@@ -44,20 +45,30 @@ func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 		req.URL.Scheme = server.Location.Scheme
 		req.RequestURI = ""
 		response, err := http.DefaultClient.Do(req)
+
 		if err != nil {
 			_, _ = fmt.Fprintln(rw, err)
-			fmt.Printf("%s request failed\n", time.Now().Format("2006-01-02 15:04:05"))
+			log.Print("request failed\n")
 			return
 		}
 		if response.StatusCode == 200 || (response.StatusCode != 429 && response.StatusCode < 500) {
+			server.fails = 0
 			rw.WriteHeader(response.StatusCode)
-			io.Copy(rw, response.Body)
-			fmt.Printf("[%s] successful response from %s with status %d\n", time.Now().Format("2006-01-02 15:04:05"), req.URL.Host, response.StatusCode)
+			_, err = io.Copy(rw, response.Body)
+			if err != nil {
+				log.Println(err)
+			}
+			log.Printf("successful response from %s with status %d\n", req.URL.Host, response.StatusCode)
 			return
 		}
-		server.excludeWithTimeout()
+
+		if server.fails == server.maxFails {
+			go server.excludeWithTimeout()
+		} else {
+			server.fails++
+		}
 	}
-	fmt.Printf("%s failed by all %d servers\n", time.Now().Format("2006-01-02 15:04:05"), len(sb.serversAvailable))
+	log.Printf("failed by all %d servers\n", len(sb.serversAvailable))
 	rw.WriteHeader(500)
 }
 
@@ -73,16 +84,20 @@ func NewSimpleServerBucket() (sb ServerBucket) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		maxFails, err := strconv.Atoi(directives[3])
+		if err != nil {
+			log.Fatal(err)
+		}
 		host, err := url.Parse(address)
 		if err != nil {
 			log.Fatal(err)
 		}
-		servers = append(servers, simpleServer{host, true, time.Duration(timeout) * time.Second})
+		servers = append(servers, simpleServer{host, true, time.Duration(timeout) * time.Millisecond, maxFails, 0})
 	}
 	for i := range servers {
 		serversAvailable = append(serversAvailable, &servers[i])
 	}
 	fmt.Printf("%d servers found in config \n", len(serversAvailable))
-	sb = ServerBucket{servers, 0, serversAvailable}
+	sb = ServerBucket{servers, 0, serversAvailable, 3}
 	return
 }

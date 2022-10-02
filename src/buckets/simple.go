@@ -1,4 +1,4 @@
-package simple
+package buckets
 
 import (
 	"bufio"
@@ -13,14 +13,33 @@ import (
 	"time"
 )
 
-type ServerBucket struct {
+type simpleServer struct {
+	Location  *url.URL
+	available bool
+	timeout   time.Duration
+	maxFails  int
+	fails     int
+}
+
+func (s *simpleServer) excludeWithTimeout() {
+	if s.available {
+		s.available = false
+		log.Printf("excluding %s from bucket for %s", s.Location, s.timeout)
+		time.Sleep(s.timeout)
+		s.available = true
+		s.fails = 0
+		log.Printf("%s is back", s.Location)
+	}
+}
+
+type SimpleServerBucket struct {
 	ServerList       []simpleServer
 	pointer          int
 	serversAvailable []*simpleServer
 	maxRetries       int
 }
 
-func (sb *ServerBucket) getServer() *simpleServer {
+func (sb *SimpleServerBucket) getServer() *simpleServer {
 	server := sb.serversAvailable[sb.pointer]
 	if sb.pointer < len(sb.serversAvailable)-1 {
 		sb.pointer++
@@ -34,7 +53,7 @@ func (sb *ServerBucket) getServer() *simpleServer {
 	return nil
 }
 
-func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
+func (sb *SimpleServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	for i := 0; i < sb.maxRetries; i++ {
 		server := sb.getServer()
 		if server == nil {
@@ -72,7 +91,7 @@ func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(500)
 }
 
-func NewSimpleServerBucket() (sb ServerBucket) {
+func newSimpleServerBucket() (sb *SimpleServerBucket) {
 	var servers []simpleServer
 	var serversAvailable []*simpleServer
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)
@@ -98,6 +117,6 @@ func NewSimpleServerBucket() (sb ServerBucket) {
 		serversAvailable = append(serversAvailable, &servers[i])
 	}
 	fmt.Printf("%d servers found in config \n", len(serversAvailable))
-	sb = ServerBucket{servers, 0, serversAvailable, 3}
+	sb = &SimpleServerBucket{servers, 0, serversAvailable, 3}
 	return
 }

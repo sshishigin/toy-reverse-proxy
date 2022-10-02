@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"toy-reverse-proxy/src/simple"
+	"toy-reverse-proxy/src/buckets"
 )
 
 func main() {
-	serverBucket := simple.NewSimpleServerBucket()
+	serverBucket := buckets.GetServerBucket("simple")
 	reverseProxy := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		serverBucket.Do(rw, req)
 		return

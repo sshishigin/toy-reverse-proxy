@@ -1,4 +1,4 @@
-package weighted
+package buckets
 
 import (
 	"bufio"
@@ -13,13 +13,13 @@ import (
 	"time"
 )
 
-type ServerBucket struct {
+type WeightedServerBucket struct {
 	ServerList       []weightedServer
 	pointer          int
 	serversAvailable []*weightedServer
 }
 
-func (sb *ServerBucket) getServer() *weightedServer {
+func (sb *WeightedServerBucket) getServer() *weightedServer {
 	server := sb.serversAvailable[sb.pointer]
 	if sb.pointer < len(sb.serversAvailable)-1 {
 		sb.pointer++
@@ -33,7 +33,7 @@ func (sb *ServerBucket) getServer() *weightedServer {
 	}
 
 }
-func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
+func (sb *WeightedServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	for _ = range sb.serversAvailable {
 		server := sb.getServer()
 		if !server.available {
@@ -58,7 +58,7 @@ func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(500)
 }
 
-func NewWeightedServerBucket() (sb ServerBucket) {
+func newWeightedServerBucket() (sb *WeightedServerBucket) {
 	var servers []weightedServer
 	var serversAvailable []*weightedServer
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)
@@ -80,6 +80,19 @@ func NewWeightedServerBucket() (sb ServerBucket) {
 			serversAvailable = append(serversAvailable, &servers[serverId])
 		}
 	}
-	sb = ServerBucket{servers, 0, serversAvailable}
+	sb = &WeightedServerBucket{servers, 0, serversAvailable}
 	return
+}
+
+type weightedServer struct {
+	Location  *url.URL
+	available bool
+	timeout   time.Duration
+	weight    int
+}
+
+func (s *weightedServer) excludeWithTimeout() {
+	s.available = false
+	time.Sleep(s.timeout)
+	s.available = true
 }

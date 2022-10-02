@@ -1,4 +1,4 @@
-package buckets
+package simple
 
 import (
 	"bufio"
@@ -12,25 +12,6 @@ import (
 	"strings"
 	"time"
 )
-
-type simpleServer struct {
-	Location  *url.URL
-	available bool
-	timeout   time.Duration
-	maxFails  int
-	fails     int
-}
-
-func (s *simpleServer) excludeWithTimeout() {
-	if s.available {
-		s.available = false
-		log.Printf("excluding %s from bucket for %s", s.Location, s.timeout)
-		time.Sleep(s.timeout)
-		s.available = true
-		s.fails = 0
-		log.Printf("%s is back", s.Location)
-	}
-}
 
 type SimpleServerBucket struct {
 	ServerList       []simpleServer
@@ -91,7 +72,7 @@ func (sb *SimpleServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(500)
 }
 
-func newSimpleServerBucket() (sb *SimpleServerBucket) {
+func NewServerBucket() (sb *SimpleServerBucket) {
 	var servers []simpleServer
 	var serversAvailable []*simpleServer
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)

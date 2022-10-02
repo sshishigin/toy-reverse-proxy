@@ -1,6 +1,10 @@
 package buckets
 
-import "net/http"
+import (
+	"net/http"
+	"toy-reverse-proxy/src/buckets/simple"
+	"toy-reverse-proxy/src/buckets/weighted"
+)
 
 type ServerBucket interface {
 	Do(http.ResponseWriter, *http.Request)
@@ -11,14 +15,14 @@ type Server interface {
 }
 
 func GetServerBucket(bucketType string) ServerBucket {
-	var Bucket ServerBucket
+	var bucket ServerBucket
 	switch bucketType {
 	case "simple":
-		Bucket = newSimpleServerBucket()
+		bucket = simple.NewServerBucket()
 	case "weighted":
-		Bucket = newWeightedServerBucket()
+		bucket = weighted.NewServerBucket()
 	default:
 		panic("Pass a proper type of bucket")
 	}
-	return Bucket
+	return bucket
 }

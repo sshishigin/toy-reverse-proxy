@@ -1,4 +1,4 @@
-package buckets
+package weighted
 
 import (
 	"bufio"
@@ -58,7 +58,7 @@ func (sb *WeightedServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(500)
 }
 
-func newWeightedServerBucket() (sb *WeightedServerBucket) {
+func NewServerBucket() (sb *WeightedServerBucket) {
 	var servers []weightedServer
 	var serversAvailable []*weightedServer
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)
@@ -82,17 +82,4 @@ func newWeightedServerBucket() (sb *WeightedServerBucket) {
 	}
 	sb = &WeightedServerBucket{servers, 0, serversAvailable}
 	return
-}
-
-type weightedServer struct {
-	Location  *url.URL
-	available bool
-	timeout   time.Duration
-	weight    int
-}
-
-func (s *weightedServer) excludeWithTimeout() {
-	s.available = false
-	time.Sleep(s.timeout)
-	s.available = true
 }

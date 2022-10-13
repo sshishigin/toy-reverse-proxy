@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type simpleServer struct {
+type Server struct {
 	Location  *url.URL
 	available bool
 	timeout   time.Duration
@@ -14,7 +14,7 @@ type simpleServer struct {
 	fails     int
 }
 
-func (s *simpleServer) excludeWithTimeout() {
+func (s *Server) ExcludeWithTimeout() {
 	if s.available {
 		s.available = false
 		log.Printf("excluding %s from bucket for %s", s.Location, s.timeout)

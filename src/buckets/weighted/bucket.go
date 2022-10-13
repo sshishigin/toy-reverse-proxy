@@ -13,13 +13,17 @@ import (
 	"time"
 )
 
-type WeightedServerBucket struct {
-	ServerList       []weightedServer
+type ServerBucket struct {
+	serverList       []Server
 	pointer          int
-	serversAvailable []*weightedServer
+	serversAvailable []*Server
 }
 
-func (sb *WeightedServerBucket) getServer() *weightedServer {
+func (sb *ServerBucket) Test() {
+	fmt.Print("asd")
+}
+
+func (sb *ServerBucket) getServer() *Server {
 	server := sb.serversAvailable[sb.pointer]
 	if sb.pointer < len(sb.serversAvailable)-1 {
 		sb.pointer++
@@ -33,7 +37,7 @@ func (sb *WeightedServerBucket) getServer() *weightedServer {
 	}
 
 }
-func (sb *WeightedServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
+func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	for _ = range sb.serversAvailable {
 		server := sb.getServer()
 		if !server.available {
@@ -53,14 +57,14 @@ func (sb *WeightedServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 			io.Copy(rw, response.Body)
 			return
 		}
-		server.excludeWithTimeout()
+		server.ExcludeWithTimeout()
 	}
 	rw.WriteHeader(500)
 }
 
-func NewServerBucket() (sb *WeightedServerBucket) {
-	var servers []weightedServer
-	var serversAvailable []*weightedServer
+func NewServerBucket() (sb *ServerBucket) {
+	var servers []Server
+	var serversAvailable []*Server
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)
 	reader := bufio.NewScanner(serverFile)
 	for reader.Scan() {
@@ -72,7 +76,7 @@ func NewServerBucket() (sb *WeightedServerBucket) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		servers = append(servers, weightedServer{host, true, time.Duration(timeout) * time.Second, weight})
+		servers = append(servers, Server{host, true, time.Duration(timeout) * time.Second, weight})
 	}
 
 	for serverId := range servers {
@@ -80,6 +84,6 @@ func NewServerBucket() (sb *WeightedServerBucket) {
 			serversAvailable = append(serversAvailable, &servers[serverId])
 		}
 	}
-	sb = &WeightedServerBucket{servers, 0, serversAvailable}
+	sb = &ServerBucket{servers, 0, serversAvailable}
 	return
 }

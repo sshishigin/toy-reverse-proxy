@@ -11,7 +11,7 @@ type ServerBucket interface {
 }
 
 type Server interface {
-	excludeWithTimeout()
+	ExcludeWithTimeout()
 }
 
 func GetServerBucket(bucketType string) ServerBucket {

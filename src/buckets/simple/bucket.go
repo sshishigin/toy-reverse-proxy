@@ -13,14 +13,14 @@ import (
 	"time"
 )
 
-type SimpleServerBucket struct {
-	ServerList       []simpleServer
+type ServerBucket struct {
+	serverList       []Server
 	pointer          int
-	serversAvailable []*simpleServer
+	serversAvailable []*Server
 	maxRetries       int
 }
 
-func (sb *SimpleServerBucket) getServer() *simpleServer {
+func (sb *ServerBucket) getServer() *Server {
 	server := sb.serversAvailable[sb.pointer]
 	if sb.pointer < len(sb.serversAvailable)-1 {
 		sb.pointer++
@@ -30,11 +30,10 @@ func (sb *SimpleServerBucket) getServer() *simpleServer {
 	if server.available {
 		return server
 	}
-
 	return nil
 }
 
-func (sb *SimpleServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
+func (sb *ServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	for i := 0; i < sb.maxRetries; i++ {
 		server := sb.getServer()
 		if server == nil {
@@ -63,7 +62,7 @@ func (sb *SimpleServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 		}
 
 		if server.fails == server.maxFails {
-			go server.excludeWithTimeout()
+			go server.ExcludeWithTimeout()
 		} else {
 			server.fails++
 		}
@@ -72,9 +71,9 @@ func (sb *SimpleServerBucket) Do(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(500)
 }
 
-func NewServerBucket() (sb *SimpleServerBucket) {
-	var servers []simpleServer
-	var serversAvailable []*simpleServer
+func NewServerBucket() (sb *ServerBucket) {
+	var servers []Server
+	var serversAvailable []*Server
 	serverFile, _ := os.OpenFile("server-list", os.O_RDONLY, 0666)
 	reader := bufio.NewScanner(serverFile)
 	for reader.Scan() {
@@ -92,12 +91,12 @@ func NewServerBucket() (sb *SimpleServerBucket) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		servers = append(servers, simpleServer{host, true, time.Duration(timeout) * time.Millisecond, maxFails, 0})
+		servers = append(servers, Server{host, true, time.Duration(timeout) * time.Millisecond, maxFails, 0})
 	}
 	for i := range servers {
 		serversAvailable = append(serversAvailable, &servers[i])
 	}
 	fmt.Printf("%d servers found in config \n", len(serversAvailable))
-	sb = &SimpleServerBucket{servers, 0, serversAvailable, 3}
+	sb = &ServerBucket{servers, 0, serversAvailable, 3}
 	return
 }
